@@ -19,7 +19,14 @@ class CacheUpdateHook {
         $this->lscacheService = GeneralUtility::makeInstance(LscacheService::class);
     }
 
-    public function processDatamap_afterDatabaseOperations($status, $table, $recordId, array $updatedFields, DataHandler $dataHandler) {
+    // phpcs:ignore
+    public function processDatamap_afterDatabaseOperations(
+        $status,
+        $table,
+        $recordId,
+        array $updatedFields,
+        DataHandler $dataHandler
+    ) {
         if ($table === "pages") {
             $this->lscacheService->purgePage((int)$recordId);
         }

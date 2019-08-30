@@ -43,6 +43,4 @@ class LscacheMiddleware implements MiddlewareInterface {
 
         return $response;
     }
-
-
 }
