@@ -1,0 +1,2 @@
+#cat=settings; type=boolean; label=Enable ESI
+lscacheSettingsEnableEsi = 0
