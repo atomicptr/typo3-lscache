@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Atomicptr\Lscache\Service;
 
 use Atomicptr\Lscache\Constants\Cacheability;
+use Atomicptr\Lscache\Constants\LscacheHeaders;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -11,25 +12,28 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 class LscacheService implements SingletonInterface {
 
-    const LSCACHE_CACHE_CONTROL_HEADER = "X-LiteSpeed-Cache-Control";
-    const LSCACHE_CACHE_TAG_HEADER = "X-LiteSpeed-Tag";
-    const LSCACHE_CACHE_VARY_HEADER = "X-LiteSpeed-Vary";
-    const LSCACHE_PURGE_HEADER = "X-LiteSpeed-Purge";
+    /**
+     * @var CacheableRulesParserService
+     */
+    protected $cacheableRulesParser;
+
+    public function __construct() {
+        $this->cacheableRulesParser = GeneralUtility::makeInstance(CacheableRulesParserService::class);
+    }
 
     public function getCacheResponseHeaders(int $statusCode, TypoScriptFrontendController $tsfe) : array {
         $headers = [];
 
-        // TODO: add ability to define custom "Rules"
-        if ($tsfe->isStaticCacheble()) {
+        if ($this->cacheableRulesParser->isCacheable($statusCode, $tsfe)) {
             $headers = [
-                self::LSCACHE_CACHE_CONTROL_HEADER => $this->getCacheControlHeader($tsfe),
-                self::LSCACHE_CACHE_TAG_HEADER => $this->getCacheTagsHeader($tsfe),
+                LscacheHeaders::CACHE_CONTROL => $this->getCacheControlHeader($tsfe),
+                LscacheHeaders::TAG => $this->getCacheTagsHeader($tsfe),
             ];
 
             $varyTags = $this->getCacheVariationTags($tsfe);
 
             if (!empty($varyTags)) {
-                $headers[self::LSCACHE_CACHE_VARY_HEADER] = implode(",", $varyTags);
+                $headers[LscacheHeaders::VARY] = implode(",", $varyTags);
             }
         }
 
@@ -45,7 +49,7 @@ class LscacheService implements SingletonInterface {
         $esiEnabled = $this->getEsiEnabledString($config->isEsiEnabled());
 
         return [
-            self::LSCACHE_CACHE_CONTROL_HEADER => Cacheability::NO_CACHE.",max-age=0,$esiEnabled"
+            LscacheHeaders::CACHE_CONTROL => Cacheability::NO_CACHE.",max-age=0,$esiEnabled"
         ];
     }
 
@@ -101,7 +105,7 @@ class LscacheService implements SingletonInterface {
 
     public function purge(string $purgeIdentifier) : void {
         // TODO: add purge hook to add extra controls to it
-        header(self::LSCACHE_PURGE_HEADER.": $purgeIdentifier");
+        header(LscacheHeaders::PURGE.": $purgeIdentifier");
     }
 
     public function purgeAll() : void {
