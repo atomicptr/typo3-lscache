@@ -8,24 +8,58 @@ use Atomicptr\Lscache\Constants\LscacheHeaders;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 class LscacheService implements SingletonInterface {
+
+    /**
+     * @var Dispatcher
+     */
+    protected $signalSlotDispatcher;
 
     /**
      * @var CacheableRulesParserService
      */
     protected $cacheableRulesParser;
 
+    /**
+     * @var array
+     */
+    public $headers = [];
+
+    /**
+     * @var array
+     */
+    public $cacheVariations = [];
+
+    /**
+     * @var array
+     */
+    public $cacheTags = [];
+
+    /**
+     * @var bool
+     */
+    public $canPurge = true;
+
     public function __construct() {
+        $this->signalSlotDispatcher = GeneralUtility::makeInstance(Dispatcher::class);
         $this->cacheableRulesParser = GeneralUtility::makeInstance(CacheableRulesParserService::class);
     }
 
+    /**
+     * @param int $statusCode
+     * @param TypoScriptFrontendController $tsfe
+     * @return array
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotException
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotReturnException
+     */
     public function getCacheResponseHeaders(int $statusCode, TypoScriptFrontendController $tsfe) : array {
-        $headers = [];
+        $this->headers = [];
 
         if ($this->cacheableRulesParser->isCacheable($statusCode, $tsfe)) {
-            $headers = [
+            $this->headers = [
                 LscacheHeaders::CACHE_CONTROL => $this->getCacheControlHeader($tsfe),
                 LscacheHeaders::TAG => $this->getCacheTagsHeader($tsfe),
             ];
@@ -33,15 +67,17 @@ class LscacheService implements SingletonInterface {
             $varyTags = $this->getCacheVariationTags($tsfe);
 
             if (!empty($varyTags)) {
-                $headers[LscacheHeaders::VARY] = implode(",", $varyTags);
+                $this->headers[LscacheHeaders::VARY] = implode(",", $varyTags);
             }
         }
 
-        if (empty($headers)) {
-            $headers = $this->getResponseHeadersForNoCache();
+        if (empty($this->headers)) {
+            $this->headers = $this->getResponseHeadersForNoCache();
         }
 
-        return $headers;
+        $this->signalSlotDispatcher->dispatch(__CLASS__, "cacheResponseHeaders", [$tsfe, $this]);
+
+        return $this->headers;
     }
 
     public function getResponseHeadersForNoCache() : array {
@@ -71,41 +107,49 @@ class LscacheService implements SingletonInterface {
         return "";
     }
 
+    /**
+     * @param TypoScriptFrontendController $tsfe
+     * @return string
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotException
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotReturnException
+     */
     protected function getCacheTagsHeader(TypoScriptFrontendController $tsfe) : string {
         $tsfe->determineId();
         $pageUid = $tsfe->id;
 
-        $cacheTags = $tsfe->getPageCacheTags();
+        $this->cacheTags = $tsfe->getPageCacheTags();
 
-        if (!empty($pageUid) && !in_array("pageId_$pageUid", $cacheTags)) {
-            $cacheTags[] = "pageId_$pageUid";
+        if (!empty($pageUid) && !in_array("pageId_$pageUid", $this->cacheTags)) {
+            $this->cacheTags[] = "pageId_$pageUid";
         }
 
-        // TODO: add ability to define custom cache tags
+        $this->signalSlotDispatcher->dispatch(__CLASS__, "cacheTags", [$tsfe, $this]);
 
-        return implode(",", $cacheTags);
+        return implode(",", $this->cacheTags);
     }
 
+    /**
+     * @param TypoScriptFrontendController $tsfe
+     * @return array
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotException
+     * @throws \TYPO3\CMS\Extbase\SignalSlot\Exception\InvalidSlotReturnException
+     */
     protected function getCacheVariationTags(TypoScriptFrontendController $tsfe) : array {
-        $variations = [];
+        $this->cacheVariations = [];
 
-        /* TODO: should there even be a seperate cache for each user?
-         if ($tsfe->isUserOrGroupSet()) {
-            try {
-                $variations[] = "feuser_".$this->getContext()->getPropertyFromAspect("frontend.user", "id");
-            } catch (AspectNotFoundException $e) {
-                ;
-            }
-        }*/
+        $this->signalSlotDispatcher->dispatch(__CLASS__, "cacheVariations", [$tsfe, $this]);
 
-        // TODO: add ability to define custom cache variations
-
-        return $variations;
+        return $this->cacheVariations;
     }
 
     public function purge(string $purgeIdentifier) : void {
-        // TODO: add purge hook to add extra controls to it
-        header(LscacheHeaders::PURGE.": $purgeIdentifier");
+        $this->canPurge = true;
+
+        $this->signalSlotDispatcher->dispatch(__CLASS__, "beforePurge", [$purgeIdentifier, $this]);
+
+        if ($this->canPurge) {
+            header(LscacheHeaders::PURGE . ": $purgeIdentifier");
+        }
     }
 
     public function purgeAll() : void {
