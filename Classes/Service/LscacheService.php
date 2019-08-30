@@ -85,7 +85,7 @@ class LscacheService implements SingletonInterface {
         $esiEnabled = $this->getEsiEnabledString($config->isEsiEnabled());
 
         return [
-            LscacheHeaders::CACHE_CONTROL => Cacheability::NO_CACHE.",max-age=0,$esiEnabled"
+            LscacheHeaders::CACHE_CONTROL => Cacheability::NO_CACHE.",max-age=0$esiEnabled"
         ];
     }
 
