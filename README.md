@@ -8,6 +8,16 @@ LiteSpeed Cache extension for TYPO3.
 $ composer require atomicptr/lscache
 ```
 
+## Configuration
+
+Put this inside your .htaccess
+
+```xml
+<IfModule LiteSpeed>
+  CacheLookup public on
+</IfModule>
+```
+
 ## Signals & Slots
 
 This extension has a few slots you can connect to:
@@ -61,7 +71,7 @@ class BeforePurgeSlot {
         if ($purgeIdentifier === "*") {
             // Don't allow to purge everything (for some reason)
             $lscacheService->canPurge = false;
-        }    
+        }
     }
 }
 ```
