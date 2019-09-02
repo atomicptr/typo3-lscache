@@ -1,6 +1,6 @@
 # typo3-lscache
 
-LiteSpeed Cache extension for TYPO3.
+[LiteSpeed](https://www.litespeedtech.com/) Cache extension for TYPO3.
 
 ## Install via composer
 
