@@ -7,12 +7,6 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 interface CacheableRuleInterface {
 
     /**
-     * Name of the Cachable rule
-     * @return string
-     */
-    public function getName() : string;
-
-    /**
      * Can the request be cached?
      * @param int $statusCode
      * @param TypoScriptFrontendController $tsfe

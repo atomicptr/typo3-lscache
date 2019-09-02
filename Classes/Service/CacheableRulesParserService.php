@@ -4,22 +4,14 @@ declare(strict_types=1);
 namespace Atomicptr\Lscache\Service;
 
 use Atomicptr\Lscache\Rules\CacheableRuleInterface;
-use TYPO3\CMS\Core\Log\Logger;
-use TYPO3\CMS\Core\Log\LogManager;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
-class CacheableRulesParserService implements SingletonInterface {
-
-    /**
-     * @var Logger
-     */
-    protected $logger;
-
-    public function __construct() {
-        $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class);
-    }
+class CacheableRulesParserService implements SingletonInterface, LoggerAwareInterface {
+    use LoggerAwareTrait;
 
     /**
      * @param int $statusCode
@@ -32,7 +24,7 @@ class CacheableRulesParserService implements SingletonInterface {
 
             if ($rule instanceof CacheableRuleInterface && !$rule->isCacheable($statusCode, $tsfe)) {
                 $this->logger->warning(
-                    "Could not cache page because lscache rule \"".$rule->getName()."\" was violated!"
+                    "Could not cache page because lscache rule \"$ruleClassName\" was violated!"
                 );
 
                 return false;
