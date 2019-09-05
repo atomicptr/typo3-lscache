@@ -1,6 +1,8 @@
 {
     "name": "atomicptr/lscache",
     "type": "typo3-cms-extension",
+    "description": "LiteSpeed Cache extension for TYPO3.",
+    "license": "MPL-2.0",
     "authors": [
         {
             "name": "Christopher Kaster",
